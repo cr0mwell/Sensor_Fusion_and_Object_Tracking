@@ -43,14 +43,13 @@ class Track:
 
         self.P = np.zeros((self.DIM_STATE, self.DIM_STATE))
         self.P[:3, :3] = M_rot @ meas.R @ M_rot.transpose()
-        self.P[3, 3] = params.sigma_p44
-        self.P[4, 4] = params.sigma_p55
-        self.P[5, 5] = params.sigma_p66
+        self.P[3, 3] = params.sigma_p44**2
+        self.P[4, 4] = params.sigma_p55**2
+        self.P[5, 5] = params.sigma_p66**2
 
         self.state = State.INITIALIZED
         self.score = 1./params.window
-        self.last_updated = 0
-        
+
         # Other track attributes
         self.id = t_id
         self.width = meas.width
@@ -88,7 +87,7 @@ class Trackmanagement:
         self.track_list = []
         self.last_id = -1
         self.result_list = []
-        
+
     def manage_tracks(self, unassigned_tracks, unassigned_meas, meas_list):
         print(f'Received unassigned_tracks: {unassigned_tracks}, unassigned_meas: {unassigned_meas}')
         # Decrease score for unassigned tracks
@@ -103,16 +102,12 @@ class Trackmanagement:
                 else:
                     print(f'Track {track.id} is not in FOV of {meas_list[0].sensor.name}')
 
-            track.last_updated -= 1
-            print(f'Decreased track {track.id} last_updated to {track.last_updated}')
-
             # Delete old tracks:
             # - if its covariance matrix P values are above the threshold
-            # - if its score drops below 'params.delete_threshold' value
             # - if confirmed track's score drops below 'params.c_delete_threshold' value
-            # - if track's last_updated attribute drops below zero
-            if track.score < params.delete_threshold or track.last_updated < params.last_updated or \
-                    (track.state == State.CONFIRMED and track.score < params.c_delete_threshold):
+            if np.any(track.P[[0, 1], [0, 1]] > params.max_P) or \
+                    (track.state == State.CONFIRMED and track.score < params.delete_threshold):
+                print(f'Track {track.id} P: {track.P}')
                 self.delete_track(track)
                 # As the track has been deleted, the rest indices should be reduced by 1
                 unassigned_tracks -= 1
@@ -121,7 +116,7 @@ class Trackmanagement:
         for j in unassigned_meas: 
             if meas_list[j].sensor.name == 'lidar':     # only initialize with lidar measurements
                 self.init_track(meas_list[j])
-            
+
     def addTrackToList(self, track):
         self.track_list.append(track)
         self.N += 1
@@ -138,9 +133,6 @@ class Trackmanagement:
     def handle_updated_track(self, track):
         if track.score < 1:
             track.score += 1./params.window
-
-        if track.last_updated < 1:
-            track.last_updated = 1
 
         if track.state == State.INITIALIZED:
             print(f'Track {track.id} is now TENTATIVE')

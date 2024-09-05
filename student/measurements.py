@@ -29,7 +29,7 @@ class Sensor:
         if name == 'lidar':
             self.dim_meas = 3
             self.sens_to_veh = np.matrix(np.identity((4)))  # transformation sensor to vehicle coordinates equals identity matrix because lidar detections are already in vehicle coordinates
-            self.fov = [-np.pi/2, np.pi/2, 47]  # angle of field of view in radians and max x range
+            self.fov = [-np.pi/2, np.pi/2]  # angle of field of view in radians
         
         elif name == 'camera':
             self.dim_meas = 2
@@ -38,7 +38,7 @@ class Sensor:
             self.f_j = calib.intrinsic[1]   # focal length j-coordinate
             self.c_i = calib.intrinsic[2]   # principal point i-coordinate
             self.c_j = calib.intrinsic[3]   # principal point j-coordinate
-            self.fov = [-0.35, 0.35, 47]    # angle of field of view in radians and max x range
+            self.fov = [-0.35, 0.35]    # angle of field of view in radians
             
         self.veh_to_sens = np.linalg.inv(self.sens_to_veh)  # transformation vehicle to sensor coordinates
     
@@ -48,7 +48,7 @@ class Sensor:
         pos_veh[0:3] = x[0:3]
         pos_sens = self.veh_to_sens @ pos_veh
 
-        if 0 < pos_sens[0, 0] < self.fov[2]:
+        if 0 < pos_sens[0, 0]:
             angle = np.arctan(pos_sens[1] / pos_sens[0])
             return self.fov[0] < angle < self.fov[1]
 

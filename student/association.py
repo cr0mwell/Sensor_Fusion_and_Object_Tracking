@@ -96,8 +96,6 @@ class Association:
             # check visibility, only update tracks in fov    
             if not meas_list[0].sensor.in_fov(track.x):
                 print(f'Track {track.id} is not in FOV of {meas_list[0].sensor.name}')
-                track.last_updated -= 1
-                print(f'Decreased track {track.id} last_updated to {track.last_updated}')
                 continue
             
             # Kalman update
